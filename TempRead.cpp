@@ -1,19 +1,18 @@
-#include <cv.h>
-#include <highgui.h>
-#include <io.h>
-#include <direct.h>
 #include <iostream>
 #include <cstring>
 #include <vector>
 #include <iomanip>
 #include <cstdlib>
+#include <io.h>
+#include <cv.h>
+#include <highgui.h>
+#include <direct.h>
 #include <mat.h>
+#include "Template.h"
+#include "xlsProcess.cpp"
 
 using namespace cv;
 using namespace std;
-
-//TODO:class Template
-struct Template{};
 
 void getFiles(string path, vector<string>& files){
 	//文件句柄  
@@ -38,19 +37,20 @@ void getFiles(string path, vector<string>& files){
 	}
 }
 
+extern double* templateHistogram(Mat templateImg, double partNum, int binNum);
+
 int maind(){
 	vector<string> TemplatesInfoList;
 	Template *templates;//template in matlab
 	Mat templateImg;
 	double partNum = 1 / 4;
 	int binNum = 30;
-	double **histogram;
-	histogram = new double *[TemplatesInfoList.size()];
-	for (int i = 0; i < TemplatesInfoList.size(); ++i)
-		histogram[i] = new double[binNum * 2];
+	Mat histogram;
+	Mat labels;
+	Mat centers;
 
 	//获取excel文件名列表
-	getFiles("D:\\QQ\\Lab_EX\\project\\data\\Templates", TemplatesInfoList);
+	getFiles("D:\\QQ\\Lab_EX\\test\\data\\Templates", TemplatesInfoList);
 
 	templates = new Template[TemplatesInfoList.size()];
 
@@ -69,15 +69,22 @@ int maind(){
 	//将所有投影存入矩阵
 	for (int i = 0; i < sizeof(templates) / sizeof(Template); ++i){
 		for (int j = 0; j < sizeof(templates[i].histogram) / sizeof(double); ++j)
-			histogram[i][j] = templates[i].histogram[j];
+			histogram.at<uchar>(i, j) = templates[i].histogram[j];
 	}
 
 	//TODO:使用kmeans聚类
-
+	kmeans(histogram, 2, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), 1, KMEANS_RANDOM_CENTERS, centers);
+	//histogram-聚类数据
+	//clusterCount-聚类个数
+	//labels-聚类编号
+	//TermCriteria-迭代终止条件
+	//attempts-聚类次数
+	//flags-选取初始点方法
+	//centers-聚类中心
 
 	//将模版的粗类别存入结构体
 	for (int i = 0; i < sizeof(templates) / sizeof(Template); ++i){
-		templates[i].cata = ids[i];
+		templates[i].cata = int(labels.at<uchar>(i));
 	}
 
 	//TODO:保存数据
@@ -95,4 +102,3 @@ int maind(){
 
 	return 0;
 }
-
