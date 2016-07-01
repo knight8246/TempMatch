@@ -37,7 +37,7 @@ Template xlsProcess(string filename){
 		fname[i] = filepath[i];
 	for (int i = 0; i < filename.size(); ++i)
 		fname[i + filepath.size()] = filename[i];*/
-	file.open(filepath+filename);
+	file.open(filename);
 	if (!file){
 		cout << "the file isn't exist!" << endl;
 		system("pause");
@@ -110,5 +110,6 @@ Template xlsProcess(string filename){
 	for (int i = 0; i < cntrect; ++i)
 		temp.rect[i] = rect[i];
 
+	file.close();
 	return temp;
 }

@@ -8,11 +8,16 @@
 #include <highgui.h>
 #include <direct.h>
 #include <mat.h>
+#include <fstream>
 #include "Template.h"
-#include "xlsProcess.cpp"
+
+extern Template xlsProcess(string filename);
+
 
 using namespace cv;
 using namespace std;
+
+extern double* templateHistogram(Mat templateImg, double partNum, int binNum);
 
 void getFiles(string path, vector<string>& files){
 	//文件句柄  
@@ -37,9 +42,9 @@ void getFiles(string path, vector<string>& files){
 	}
 }
 
-extern double* templateHistogram(Mat templateImg, double partNum, int binNum);
 
-int maind(){
+int main(){
+	string filepath = "D:\\QQ\\Lab_EX\\test\\data\\Templates\\";
 	vector<string> TemplatesInfoList;
 	Template *templates;//template in matlab
 	Mat templateImg;
@@ -48,6 +53,7 @@ int maind(){
 	Mat histogram;
 	Mat labels;
 	Mat centers;
+	ofstream file;
 
 	//获取excel文件名列表
 	getFiles("D:\\QQ\\Lab_EX\\test\\data\\Templates", TemplatesInfoList);
@@ -55,12 +61,14 @@ int maind(){
 	templates = new Template[TemplatesInfoList.size()];
 
 	//读取模版信息
-	//TODO:xlsProcess
-	for (int i = 0; i < TemplatesInfoList.size(); ++i)
+	//xlsProcess
+	for (int i = 0; i < TemplatesInfoList.size(); ++i){
+		cout << TemplatesInfoList[i].c_str() << endl;
 		templates[i] = xlsProcess(TemplatesInfoList[i].c_str());
+	}
 	
 	//计算表格表头部分的横纵投影
-	//TODO:templateHistogram
+	//templateHistogram
 	for (int i = 0; i < sizeof(templates)/sizeof(Template); ++i){
 		templateImg = imread(templates[i].FilePath);
 		templates[i].histogram = templateHistogram(templateImg, partNum, binNum);
@@ -72,7 +80,7 @@ int maind(){
 			histogram.at<uchar>(i, j) = templates[i].histogram[j];
 	}
 
-	//TODO:使用kmeans聚类
+	//使用kmeans聚类
 	kmeans(histogram, 2, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), 1, KMEANS_RANDOM_CENTERS, centers);
 	//histogram-聚类数据
 	//clusterCount-聚类个数
@@ -87,16 +95,34 @@ int maind(){
 		templates[i].cata = int(labels.at<uchar>(i));
 	}
 
-	//TODO:保存数据
-	double *outC = new double[M*N];
-	for (int i = 0; i<M; i++)
-		for (int j = 0; j<N; j++)
-			outC[M*j + i] = C[i][j];
-	pmatFile = matOpen("culsterCenter.mat", "w");
-	pMxArray = mxCreateDoubleMatrix(M, N, mxREAL);
-	mxSetData(pMxArray, outC);
-	matPutVariable(pmatFile, "A", pMxArray);
-	matClose(pmatFile);
+	//TODO:保存数据 templates
+	//save clusterCenter
+	file.open("clusterCenter.csv");
+	for (int i = 0; i < centers.rows; ++i){
+		for (int j = 0; j < centers.cols; ++j)
+			file << centers.at<uchar>(i, j) << ",";
+		file << "\n";
+	}
+	file.close();
+
+	//save templates
+	file.open("templateInfo.csv");
+	for (int i = 0; i < sizeof(templates) / sizeof(Template); ++i){
+		file << templates[i].FilePath << "," << templates[i].CompanyName << ",";
+		file << templates[i].DocumentType << "," << templates[i].TemplateType << ",";
+		file << templates[i].PageFlag << "," << templates[i].TableFlag << ",";
+		file << templates[i].cata << "," << sizeof(templates[i].rect) / sizeof(RECT) << "\n";
+		for (int j = 0; j < sizeof(templates[i].histogram) / sizeof(double); ++j){
+			file << templates[i].histogram[j] << ",";
+		}
+		file << "\n";
+		for (int j = 0; j < sizeof(templates[i].rect) / sizeof(RECT); ++j){
+			file << templates[i].rect[i].pos[0] << "," << templates[i].rect[i].pos[1] << ",";
+			file << templates[i].rect[i].pos[2] << "," << templates[i].rect[i].pos[3] << ",";
+			file << templates[i].rect[i].FeatureFlag << "," << templates[i].rect[i].DatabaseTablename << ",";
+			file << templates[i].rect[i].DatabaseColname << "\n";
+		}
+	}
 
 	system("pause");
 
