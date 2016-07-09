@@ -1,7 +1,7 @@
 #ifndef Template_
 #define Template_
 #include <iostream>
-#include "Rect.h"
+#include "RECT.h"
 using namespace std;
 
 class Template{
@@ -12,7 +12,9 @@ public:
 	string TemplateType;
 	char PageFlag;
 	char TableFlag;
+	int rectNum;
 	RECT *rect;
+	int histCols;
 	double *histogram;
 	int cata;
 };

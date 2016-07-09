@@ -1,17 +1,16 @@
-#include <cv.h>
-#include <highgui.h>
-#include <io.h>
-#include <direct.h>
 #include <iostream>
+#include <fstream>
 #include <cstring>
 #include <vector>
 #include <iomanip>
 #include <cstdlib>
-#include <mat.h>
 #include <cstdio>
-#include <fstream>
+#include <io.h>
+#include <cv.h>
+#include <highgui.h>
+#include <direct.h>
+#include <mat.h>
 #include "Template.h"
-
 using namespace cv;
 using namespace std;
 
@@ -27,16 +26,16 @@ int str2num(string str){
 Template xlsProcess(string filename){
 	Template temp;
 	string filepath = "D:\\QQ\\Lab_EX\\test\\data\\Templates\\";
-	string context,cell="";//context:each line in csv; cell:each cell in context;
+	string context, cell = "";//context:each line in csv; cell:each cell in context;
 	RECT *rect = new RECT[50];
 	int count = 0, cntrect = 0, pos;//count:count for cell; cntrect:count for rect; pos:position;
 	ifstream file;
 	/*char *fname = new char[filename.size() + filepath.size()];
 
 	for (int i = 0; i < filepath.size(); ++i)
-		fname[i] = filepath[i];
+	fname[i] = filepath[i];
 	for (int i = 0; i < filename.size(); ++i)
-		fname[i + filepath.size()] = filename[i];*/
+	fname[i + filepath.size()] = filename[i];*/
 	file.open(filename);
 	if (!file){
 		cout << "the file isn't exist!" << endl;
@@ -47,30 +46,30 @@ Template xlsProcess(string filename){
 	getline(file, context);
 	//read second line in csv;
 	getline(file, context);
-	for (unsigned int i = 0; i < context.size(); ++i){
+	for (int i = 0; i < context.length(); ++i){
 		if (context[i] == ','){
 			switch (count){
-				case 1:temp.FilePath = cell; break;
-				case 2:temp.CompanyName = cell; break;
-				case 3:temp.DocumentType = cell; break;
-				case 4:temp.TemplateType = cell; break;
-				case 5:if (cell == "FLASE")
-							temp.PageFlag = '0';
-					   else temp.PageFlag = '1'; break;
-				case 6:if (cell == "FLASE")
-							temp.TableFlag = '0';
-					   else temp.TableFlag = '1'; break;
-				case 8:pos = str2num(cell);
-						rect[cntrect].pos[0] = pos; break;
-				case 9:pos = str2num(cell);
-						rect[cntrect].pos[1] = pos; break;
-				case 10:pos = str2num(cell);
-						rect[cntrect].pos[2] = pos; break;
-				case 11:pos = str2num(cell);
-						rect[cntrect].pos[3] = pos; break;
-				case 12:rect[cntrect].FeatureFlag = cell; break;
-				case 13:rect[cntrect].DatabaseTablename = cell; break;
-				case 15:rect[cntrect].DatabaseColname = cell; break;
+			case 1:temp.FilePath = cell; break;
+			case 2:temp.CompanyName = cell; break;
+			case 3:temp.DocumentType = cell; break;
+			case 4:temp.TemplateType = cell; break;
+			case 5:if (cell == "FLASE")
+				temp.PageFlag = '0';
+				   else temp.PageFlag = '1'; break;
+			case 6:if (cell == "FLASE")
+				temp.TableFlag = '0';
+				   else temp.TableFlag = '1'; break;
+			case 8:pos = str2num(cell);
+				rect[cntrect].pos.x = pos; break;
+			case 9:pos = str2num(cell);
+				rect[cntrect].pos.y = pos; break;
+			case 10:pos = str2num(cell);
+				rect[cntrect].pos.width = pos; break;
+			case 11:pos = str2num(cell);
+				rect[cntrect].pos.height = pos; break;
+			case 12:rect[cntrect].FeatureFlag = cell; break;
+			case 13:rect[cntrect].DatabaseTablename = cell; break;
+			case 15:rect[cntrect].DatabaseColname = cell; break;
 			}
 			++count;
 			cell = "";
@@ -87,13 +86,13 @@ Template xlsProcess(string filename){
 			if (context[i] == ','){
 				switch (count){
 				case 8:pos = str2num(cell);
-					rect[cntrect].pos[0] = pos; break;
+					rect[cntrect].pos.x = pos; break;
 				case 9:pos = str2num(cell);
-					rect[cntrect].pos[1] = pos; break;
+					rect[cntrect].pos.y = pos; break;
 				case 10:pos = str2num(cell);
-					rect[cntrect].pos[2] = pos; break;
+					rect[cntrect].pos.width = pos; break;
 				case 11:pos = str2num(cell);
-					rect[cntrect].pos[3] = pos; break;
+					rect[cntrect].pos.height = pos; break;
 				case 12:rect[cntrect].FeatureFlag = cell; break;
 				case 13:rect[cntrect].DatabaseTablename = cell; break;
 				case 15:rect[cntrect].DatabaseColname = cell; break;
@@ -105,7 +104,8 @@ Template xlsProcess(string filename){
 		}
 		++cntrect;
 	}
-
+	
+	temp.rectNum = cntrect;
 	temp.rect = new RECT[cntrect];
 	for (int i = 0; i < cntrect; ++i)
 		temp.rect[i] = rect[i];

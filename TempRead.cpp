@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstring>
 #include <vector>
 #include <iomanip>
@@ -8,15 +9,11 @@
 #include <highgui.h>
 #include <direct.h>
 #include <mat.h>
-#include <fstream>
 #include "Template.h"
+using namespace std;
+using namespace cv;
 
 extern Template xlsProcess(string filename);
-
-
-using namespace cv;
-using namespace std;
-
 extern double* templateHistogram(Mat templateImg, double partNum, int binNum);
 
 void getFiles(string path, vector<string>& files){
@@ -25,63 +22,65 @@ void getFiles(string path, vector<string>& files){
 	//文件信息  
 	struct _finddata_t fileinfo;
 	string p;
-	if((hFile = _findfirst(p.assign(path).append("\\*").c_str(), &fileinfo)) != -1){
+	if ((hFile = _findfirst(p.assign(path).append("\\*").c_str(), &fileinfo)) != -1){
 		do{
 			//如果是目录,迭代之  
 			//如果不是,加入列表  
-			if((fileinfo.attrib &  _A_SUBDIR)){
-				if(strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0)
+			if ((fileinfo.attrib &  _A_SUBDIR)){
+				if (strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0)
 					getFiles(p.assign(path).append("\\").append(fileinfo.name), files);
 			}
 			else{
 				files.push_back(p.assign(path).append("\\").append(fileinfo.name));
 			}
-		}
-		while(_findnext(hFile, &fileinfo) == 0);
+		} while (_findnext(hFile, &fileinfo) == 0);
 		_findclose(hFile);
 	}
 }
 
-
 int main(){
 	string filepath = "D:\\QQ\\Lab_EX\\test\\data\\Templates\\";
 	vector<string> TemplatesInfoList;
-	Template *templates;//template in matlab
+	Template *templates; //template in matlab
 	Mat templateImg;
-	double partNum = 1 / 4;
+	double partNum = (double)1 / 4;
 	int binNum = 30;
-	Mat histogram;
 	Mat labels;
 	Mat centers;
-	ofstream file;
 
 	//获取excel文件名列表
 	getFiles("D:\\QQ\\Lab_EX\\test\\data\\Templates", TemplatesInfoList);
 
-	templates = new Template[TemplatesInfoList.size()];
+	int tempNum = TemplatesInfoList.size();
+	templates = new Template[tempNum];
 
 	//读取模版信息
 	//xlsProcess
-	for (int i = 0; i < TemplatesInfoList.size(); ++i){
-		cout << TemplatesInfoList[i].c_str() << endl;
-		templates[i] = xlsProcess(TemplatesInfoList[i].c_str());
+	for (int i = 0; i < tempNum; ++i){
+		//cout << TemplatesInfoList[i].c_str() << endl;
+		templates[i] = xlsProcess(TemplatesInfoList[i]);
 	}
-	
+
 	//计算表格表头部分的横纵投影
 	//templateHistogram
-	for (int i = 0; i < sizeof(templates)/sizeof(Template); ++i){
+	for (int i = 0; i < tempNum; ++i){
+		//cout << templates[i].FilePath << endl;
 		templateImg = imread(templates[i].FilePath);
+		templates[i].histCols = 2 * binNum;
 		templates[i].histogram = templateHistogram(templateImg, partNum, binNum);
 	}
 
 	//将所有投影存入矩阵
-	for (int i = 0; i < sizeof(templates) / sizeof(Template); ++i){
-		for (int j = 0; j < sizeof(templates[i].histogram) / sizeof(double); ++j)
-			histogram.at<uchar>(i, j) = templates[i].histogram[j];
+	Mat histogram(tempNum, 2*binNum, CV_32FC1);
+	for (int i = 0; i < tempNum; ++i){
+		for (int j = 0; j < 2 * binNum; ++j){
+			histogram.at<float>(i, j) = templates[i].histogram[j];
+		}
 	}
-
+	
+	//cout << "before kmeans" << endl;
 	//使用kmeans聚类
-	kmeans(histogram, 2, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), 1, KMEANS_RANDOM_CENTERS, centers);
+	kmeans(histogram, 2, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), 3, KMEANS_PP_CENTERS, centers);
 	//histogram-聚类数据
 	//clusterCount-聚类个数
 	//labels-聚类编号
@@ -89,42 +88,55 @@ int main(){
 	//attempts-聚类次数
 	//flags-选取初始点方法
 	//centers-聚类中心
+	//cout << "after kmeans" << endl;
+	//cout << labels << endl;
+	//cout << centers << endl;
 
 	//将模版的粗类别存入结构体
-	for (int i = 0; i < sizeof(templates) / sizeof(Template); ++i){
-		templates[i].cata = int(labels.at<uchar>(i));
+	for (int i = 0; i < tempNum; ++i){
+		templates[i].cata = labels.at<int>(i);
 	}
 
 	//TODO:保存数据 templates
-	//save clusterCenter
+	ofstream file;
 	file.open("clusterCenter.csv");
+	file << centers.rows << '\n';
+	file << centers.cols << '\n';
 	for (int i = 0; i < centers.rows; ++i){
 		for (int j = 0; j < centers.cols; ++j)
-			file << centers.at<uchar>(i, j) << ",";
-		file << "\n";
+			file << centers.at<float>(i, j) << ',';
+		file << '\n';
 	}
 	file.close();
 
-	//save templates
 	file.open("templateInfo.csv");
-	for (int i = 0; i < sizeof(templates) / sizeof(Template); ++i){
-		file << templates[i].FilePath << "," << templates[i].CompanyName << ",";
-		file << templates[i].DocumentType << "," << templates[i].TemplateType << ",";
-		file << templates[i].PageFlag << "," << templates[i].TableFlag << ",";
-		file << templates[i].cata << "," << sizeof(templates[i].rect) / sizeof(RECT) << "\n";
-		for (int j = 0; j < sizeof(templates[i].histogram) / sizeof(double); ++j){
-			file << templates[i].histogram[j] << ",";
+	file << tempNum << '\n';
+	for (int i = 0; i < tempNum; ++i){
+		file << templates[i].CompanyName << ',';
+		file << templates[i].DocumentType << ',';
+		file << templates[i].FilePath << ',';
+		file << templates[i].TemplateType << ',';
+		file << templates[i].PageFlag << ',';
+		file << templates[i].TableFlag << ',';
+		file << templates[i].histCols << ',';
+		for (int j = 0; j < templates[i].histCols; ++j){
+			file << templates[i].histogram[j] << ',';
 		}
-		file << "\n";
-		for (int j = 0; j < sizeof(templates[i].rect) / sizeof(RECT); ++j){
-			file << templates[i].rect[i].pos[0] << "," << templates[i].rect[i].pos[1] << ",";
-			file << templates[i].rect[i].pos[2] << "," << templates[i].rect[i].pos[3] << ",";
-			file << templates[i].rect[i].FeatureFlag << "," << templates[i].rect[i].DatabaseTablename << ",";
-			file << templates[i].rect[i].DatabaseColname << "\n";
+		file << templates[i].cata << ',';
+		file << templates[i].rectNum << ',';
+		for (int j = 0; j < templates[i].rectNum; ++j){
+			file << templates[i].rect[j].pos.x << ',';
+			file << templates[i].rect[j].pos.y << ',';
+			file << templates[i].rect[j].pos.width << ',';
+			file << templates[i].rect[j].pos.height << ',';
+			file << templates[i].rect[j].FeatureFlag << ',';
+			file << templates[i].rect[j].DatabaseTablename << ',';
+			file << templates[i].rect[j].DatabaseColname << ',';
 		}
+		file << '\n';
 	}
+	file.close();
 
 	system("pause");
-
 	return 0;
 }

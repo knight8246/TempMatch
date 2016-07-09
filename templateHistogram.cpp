@@ -7,20 +7,29 @@ using namespace cv;
 double* templateHistogram(Mat templateImg, double partNum, int binNum){
 	Mat img;
 	CvSize normalSize;
-	normalSize.height = 60;
-	normalSize.width = 60;
+	//归一化尺寸
+	normalSize.height = 600;
+	normalSize.width = 600;
+	//OTSU二值化
 	if (templateImg.channels() > 1)
 		cvtColor(templateImg, img, CV_RGB2GRAY);
 	else
-		img = templateImg;
-	resize(img, img, normalSize);
+		templateImg.copyTo(img);
+	resize(img, img, normalSize, CV_INTER_LINEAR);
+	//imshow("归一化尺寸", img);
+	//waitKey(0);
 	threshold(img, img, 0, 255, CV_THRESH_OTSU);
+	//imshow("二值化", img);
+	//waitKey(0);
 
 	int *count = new int[binNum];
-	for (int i = 0; i < binNum; ++i)
-		count[i] = 0;
 	double *histogram = new double[2 * binNum];
 	int minCount = INT_MAX, maxCount = 0;
+	for (int i = 0; i < binNum; ++i)
+		count[i] = 0;
+
+	//对表头求投影
+	//横投影
 	for (int k = 0; k < binNum; ++k){
 		for (int i = 0; i < floor(normalSize.height * partNum); ++i){
 			for (int j = k * floor(normalSize.width / binNum); j < (k + 1) * floor(normalSize.width / binNum); ++j){
@@ -33,10 +42,14 @@ double* templateHistogram(Mat templateImg, double partNum, int binNum){
 			maxCount = count[k];
 		}
 	}
-	for (int k = 0; k < binNum; ++k)
+	for (int k = 0; k < binNum; ++k){
 		histogram[k] = double(count[k] - minCount) / maxCount;
+	}
+
+	//初始化
 	for (int i = 0; i < binNum; ++i)
 		count[i] = 0;
+	//纵投影
 	minCount = 255; maxCount = 0;
 	for (int k = 0; k < binNum; ++k){
 		for (int i = k*floor(normalSize.height * partNum / binNum); i < (k + 1) * floor(normalSize.height * partNum / binNum); ++i){
@@ -52,5 +65,7 @@ double* templateHistogram(Mat templateImg, double partNum, int binNum){
 	}
 	for (int k = binNum; k < 2*binNum; ++k)
 		histogram[k] = double(count[k-binNum] - minCount) / maxCount;
+
+	//system("pause");
 	return histogram;
 }
