@@ -80,7 +80,7 @@ int main(){
 	
 	//cout << "before kmeans" << endl;
 	//使用kmeans聚类
-	kmeans(histogram, 2, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), 3, KMEANS_PP_CENTERS, centers);
+	kmeans(histogram, 5, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), 3, KMEANS_PP_CENTERS, centers);
 	//histogram-聚类数据
 	//clusterCount-聚类个数
 	//labels-聚类编号
@@ -97,7 +97,7 @@ int main(){
 		templates[i].cata = labels.at<int>(i);
 	}
 
-	//TODO:保存数据 templates
+	//保存数据 templates
 	ofstream file;
 	file.open("clusterCenter.csv");
 	file << centers.rows << '\n';
